@@ -1,135 +1,136 @@
-<!-- components/reviews/ReviewsList.vue - 主要評價列表組件 -->
+<!-- components/reviews/ReviewsList.vue - 修復認證問題 -->
 <template>
-  <div class="reviews-list-container" ref="reviewsContainer">
-    <!-- 載入狀態 -->
-    <div v-if="loading" class="loading-state text-center">
-      <div class="spinner-border text-success" role="status">
-        <span class="visually-hidden">載入中...</span>
+    <div class="reviews-list-container" ref="reviewsContainer">
+      <!-- 載入狀態 -->
+      <div v-if="loading" class="loading-state text-center">
+        <div class="spinner-border text-success" role="status">
+          <span class="visually-hidden">載入中...</span>
+        </div>
+        <p class="mt-3 text-forest">正在載入評價，請稍候...</p>
       </div>
-      <p class="mt-3 text-forest">正在載入評價，請稍候...</p>
-    </div>
-    
-    <!-- 錯誤訊息 -->
-    <div v-else-if="error" class="error-state">
-      <div class="alert alert-danger d-flex align-items-center">
-        <i class="bi bi-exclamation-triangle-fill me-3 fs-4"></i>
-        <div>
-          <h5>載入評價時發生錯誤</h5>
-          <p>{{ error }}</p>
-          <button class="btn btn-outline-danger" @click="fetchReviews">
-            <i class="bi bi-arrow-clockwise me-1"></i>
-            重新嘗試
-          </button>
+      
+      <!-- 錯誤訊息 -->
+      <div v-else-if="error" class="error-state">
+        <div class="alert alert-danger d-flex align-items-center">
+          <i class="bi bi-exclamation-triangle-fill me-3 fs-4"></i>
+          <div>
+            <h5>載入評價時發生錯誤</h5>
+            <p>{{ error }}</p>
+            <button class="btn btn-outline-danger" @click="fetchReviews">
+              <i class="bi bi-arrow-clockwise me-1"></i>
+              重新嘗試
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-    
-    <!-- 無評價時顯示 -->
-    <div v-else-if="filteredReviews.length === 0" class="empty-state text-center">
-      <i class="bi bi-chat-square-text empty-icon"></i>
-      <h3 class="text-forest">目前尚無符合條件的評價</h3>
-      <p class="text-forest-medium">請嘗試調整篩選條件或成為第一個評價此營地的用戶！</p>
-    </div>
-    
-    <!-- 評價列表 -->
-    <div v-else class="reviews-list">
-      <h2 class="section-title mb-4">
-        <i class="bi bi-star-fill me-2 text-warning"></i>
-        營地評價
-        <span class="review-count">({{ totalReviews }})</span>
-      </h2>
       
-      <div class="review-items">
-        <ReviewItem 
-          v-for="review in paginatedReviews" 
-          :key="review.id"
-          :review="review"
-          :currentUser="currentUser"
-          @toggle-like="handleToggleLike"
-          @delete-review="handleDeleteReview"
-          @edit-review="handleEditReview"
-          @reply-review="handleReplyReview"
-          @edit-reply="handleEditReply"
-          @delete-reply="handleDeleteReply"
-          @report-review="handleReportReview"
-          @report-reply="handleReportReply"
-        />
+      <!-- 無評價時顯示 -->
+      <div v-else-if="filteredReviews.length === 0" class="empty-state text-center">
+        <i class="bi bi-chat-square-text empty-icon"></i>
+        <h3 class="text-forest">目前尚無符合條件的評價</h3>
+        <p class="text-forest-medium">請嘗試調整篩選條件或成為第一個評價此營地的用戶！</p>
       </div>
       
-      <!-- 分頁控制 (只有當有多頁時才顯示) -->
-      <div v-if="totalPages > 1" class="pagination-container">
-        <nav aria-label="評價分頁">
-          <ul class="pagination">
-            <li class="page-item" :class="{ disabled: currentPage === 0 }">
-              <a class="page-link" href="#" @click.prevent="changePage(currentPage - 1)">
-                <i class="bi bi-chevron-left"></i>
-              </a>
-            </li>
-            
-            <li 
-              v-for="page in displayedPages" 
-              :key="page" 
-              class="page-item" 
-              :class="{ active: currentPage === page }"
-            >
-              <a class="page-link" href="#" @click.prevent="changePage(page)">
-                {{ page + 1 }}
-              </a>
-            </li>
-            
-            <li class="page-item" :class="{ disabled: currentPage >= totalPages - 1 }">
-              <a class="page-link" href="#" @click.prevent="changePage(currentPage + 1)">
-                <i class="bi bi-chevron-right"></i>
-              </a>
-            </li>
-          </ul>
-        </nav>
+      <!-- 評價列表 -->
+      <div v-else class="reviews-list">
+        <h2 class="section-title mb-4">
+          <i class="bi bi-star-fill me-2 text-warning"></i>
+          營地評價
+          <span class="review-count">({{ totalReviews }})</span>
+        </h2>
+        
+        <div class="review-items">
+          <ReviewItem 
+            v-for="review in paginatedReviews" 
+            :key="review.id"
+            :review="review"
+            :currentUser="currentUser"
+            @toggle-like="handleToggleLike"
+            @delete-review="handleDeleteReview"
+            @edit-review="handleEditReview"
+            @reply-review="handleReplyReview"
+            @edit-reply="handleEditReply"
+            @delete-reply="handleDeleteReply"
+            @report-review="handleReportReview"
+            @report-reply="handleReportReply"
+          />
+        </div>
+        
+        <!-- 分頁控制 (只有當有多頁時才顯示) -->
+        <div v-if="totalPages > 1" class="pagination-container">
+          <nav aria-label="評價分頁">
+            <ul class="pagination">
+              <li class="page-item" :class="{ disabled: currentPage === 0 }">
+                <a class="page-link" href="#" @click.prevent="changePage(currentPage - 1)">
+                  <i class="bi bi-chevron-left"></i>
+                </a>
+              </li>
+              
+              <li 
+                v-for="page in displayedPages" 
+                :key="page" 
+                class="page-item" 
+                :class="{ active: currentPage === page }"
+              >
+                <a class="page-link" href="#" @click.prevent="changePage(page)">
+                  {{ page + 1 }}
+                </a>
+              </li>
+              
+              <li class="page-item" :class="{ disabled: currentPage >= totalPages - 1 }">
+                <a class="page-link" href="#" @click.prevent="changePage(currentPage + 1)">
+                  <i class="bi bi-chevron-right"></i>
+                </a>
+              </li>
+            </ul>
+          </nav>
+        </div>
       </div>
+      
+      <!-- 引入各種功能模態框組件 -->
+      <ReviewReplyModal 
+        ref="replyModal"
+        :review="selectedReplyReview"
+        @replied="onReplySuccess"
+      />
+      
+      <ReplyEditModal
+        ref="editReplyModal"
+        :review="selectedEditReply"
+        @edited="onReplyEditSuccess"
+      />
+      
+      <ReviewEditModal
+        ref="editReviewModal"
+        :review="selectedReview"
+        :campSiteId="campSiteId"
+        @edited="onReviewEditSuccess"
+      />
+      
+      <ReportModal
+        ref="reportReviewModal"
+        :review="selectedReportReview"
+        target-type="review"
+        :userId="currentUser.id"
+        @reported="onReportSuccess"
+      />
+      
+      <ReportModal
+        ref="reportReplyModal"
+        :review="selectedReportReview"
+        target-type="reply"
+        :userId="currentUser.id"
+        @reported="onReportSuccess"
+      />
     </div>
-    
-    <!-- 引入各種功能模態框組件 -->
-    <ReviewReplyModal 
-      ref="replyModal"
-      :review="selectedReplyReview"
-      @replied="onReplySuccess"
-    />
-    
-    <ReplyEditModal
-      ref="editReplyModal"
-      :review="selectedEditReply"
-      @edited="onReplyEditSuccess"
-    />
-    
-    <ReviewEditModal
-      ref="editReviewModal"
-      :review="selectedReview"
-      :campSiteId="campSiteId"
-      @edited="onReviewEditSuccess"
-    />
-    
-    <ReportModal
-      ref="reportReviewModal"
-      :review="selectedReportReview"
-      target-type="review"
-      :userId="currentUser.id"
-      @reported="onReportSuccess"
-    />
-    
-    <ReportModal
-      ref="reportReplyModal"
-      :review="selectedReportReview"
-      target-type="reply"
-      :userId="currentUser.id"
-      @reported="onReportSuccess"
-    />
-  </div>
 </template>
 
 <script>
 import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
+import axiosapi from '@/plugins/axios.js';  // 使用配置好的axios实例 
 
-// 引入組件 - 修正引用路徑
+// 引入組件
 import ReviewItem from './ReviewItem.vue';
 import ReviewReplyModal from './modals/ReviewReplyModal.vue';
 import ReplyEditModal from './modals/ReplyEditModal.vue';
@@ -334,12 +335,15 @@ export default {
       });
     };
     
-    // 載入評價列表
+    // 載入評價列表 - 修正認證問題
     const fetchReviews = async () => {
       loading.value = true;
       error.value = '';
       
       try {
+        // 先嘗試獲取 Token
+        const token = localStorage.getItem('accessToken');
+        
         const params = {
           campSiteId: props.campSiteId,
           userId: props.currentUser.id,
@@ -350,17 +354,22 @@ export default {
         
         console.log('開始獲取評價列表，參數:', params);
         
-        const response = await axios.get('/api/reviews', { params });
+        // 使用配置好的axios實例，它會自動處理token
+        const response = await axiosapi.get('/api/reviews', { params });
         console.log('API 返回數據:', response.data);
         
         if (response.data && response.data.content) {
           // 後端分頁格式
           reviews.value = response.data.content;
           rawTotalElements.value = response.data.totalElements || reviews.value.length;
-        } else {
+        } else if (Array.isArray(response.data)) {
           // 簡單數組格式
-          reviews.value = Array.isArray(response.data) ? response.data : [];
+          reviews.value = response.data;
           rawTotalElements.value = reviews.value.length;
+        } else {
+          reviews.value = [];
+          rawTotalElements.value = 0;
+          console.log('API返回的數據格式不符合預期');
         }
         
         console.log(`成功載入 ${reviews.value.length} 個評價，總數: ${rawTotalElements.value}`);
@@ -369,7 +378,25 @@ export default {
         emit('total-updated', totalReviews.value);
       } catch (err) {
         console.error('獲取評價失敗:', err);
-        error.value = err.response?.data?.message || '載入評價時發生錯誤，請稍後再試';
+        
+        if (err.response) {
+          if (err.response.status === 401) {
+            error.value = '未授權訪問，請先登入再試';
+            
+            // 嘗試清除並重新獲取令牌
+            const authStore = localStorage.getItem('accessToken') ? '授權令牌存在' : '授權令牌不存在';
+            console.log('授權狀態:', authStore);
+            
+            // 提供有關如何解決授權問題的建議
+            console.log('嘗試重新登入以解決授權問題');
+          } else if (err.response.status === 403) {
+            error.value = '無權限查看評價，您可能需要更高的權限';
+          } else {
+            error.value = err.response.data?.message || `載入評價時發生錯誤 (${err.response.status})`;
+          }
+        } else {
+          error.value = err.message || '載入評價時發生錯誤，請稍後再試';
+        }
       } finally {
         loading.value = false;
       }
@@ -381,7 +408,7 @@ export default {
         console.log(`嘗試切換評價 ${reviewId} 的點讚狀態，用戶 ID: ${props.currentUser.id}`);
         
         // 調用後端 API
-        const response = await axios.post(`/api/reviews/${reviewId}/like`, null, {
+        const response = await axiosapi.post(`/api/reviews/${reviewId}/like`, null, {
           params: { userId: props.currentUser.id }
         });
         
@@ -430,7 +457,7 @@ export default {
         console.log(`嘗試刪除評價 ${reviewId}，用戶 ID: ${props.currentUser.id}`);
         
         // 調用後端 API 刪除評價
-        const response = await axios.delete(`/api/reviews/${reviewId}`, {
+        const response = await axiosapi.delete(`/api/reviews/${reviewId}`, {
           params: { userId: props.currentUser.id }
         });
         
@@ -494,8 +521,8 @@ export default {
       try {
         console.log(`嘗試刪除評價 ${reviewId} 的回覆`);
         
-        // 調用後端 API 刪除回覆 - 不傳遞 userId 參數
-        const response = await axios.delete(`/api/reviews/${reviewId}/reply`);
+        // 調用後端 API 刪除回覆
+        const response = await axiosapi.delete(`/api/reviews/${reviewId}/reply`);
         
         console.log('刪除回覆 API 回應:', response.data);
         
@@ -617,7 +644,7 @@ export default {
       reportReplyModal
     };
   }
-};
+}
 </script>
 
 <style scoped>
