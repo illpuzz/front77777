@@ -1,11 +1,13 @@
 <!-- src/views/reviews/ReviewsView.vue -->
-```vue
 <template>
     <div class="reviews-view">
       <!-- 管理員檢舉管理面板（僅管理員可見） -->
-      <div v-if="isAdmin" class="admin-controls mb-4">
+      <div v-if="isAdmin || isSuperAdmin" class="admin-controls mb-4">
         <div class="d-flex justify-content-between align-items-center">
-          <h2 class="admin-title"><i class="bi bi-shield-check me-2"></i>管理員專區</h2>
+          <h2 class="admin-title">
+            <i class="bi bi-shield-check me-2"></i>管理員專區
+            <span v-if="isSuperAdmin" class="badge bg-danger ms-2">超級管理員</span>
+          </h2>
           <div class="control-buttons">
             <button 
               class="btn btn-admin-reviews me-2" 
@@ -29,17 +31,17 @@
       
       <!-- 管理員檢舉管理面板 -->
       <AdminReportManager 
-        v-if="isAdmin && adminView === 'reports'"
+        v-if="(isAdmin || isSuperAdmin) && adminView === 'reports'"
         :currentUser="currentUserObject"
         @handle-report="handleReport"
       />
       
       <!-- 評價相關功能（所有用戶可見） -->
-      <div v-if="adminView === 'reviews' || !isAdmin">
+      <div v-if="adminView === 'reviews' || !(isAdmin || isSuperAdmin)">
         <ReviewFilter 
           @filter-applied="applyFilters"
           @add-review="handleAddReviewClick"
-          :canAddReview="isLoggedIn && !isAdmin && !isCampOwner"
+          :canAddReview="isLoggedIn && isRegularUser && !isCampOwner"
         />
         
         <!-- 使用路由參數的campSiteId -->
@@ -166,10 +168,28 @@ export default {
     // ReviewsList 組件引用
     const reviewsListRef = ref(null);
     
-    // 從 authStore 獲取用戶信息的計算屬性
+    // 從 authStore 獲取用戶信息和角色的計算屬性
     const isLoggedIn = computed(() => authStore.isLoggedIn);
-    const isAdmin = computed(() => authStore.isAdmin);
-    const isCampOwner = computed(() => authStore.isCampOwner);
+    
+    // 更精確的角色判斷
+    const userRole = computed(() => authStore.role);
+    
+    // 是否為超級管理員
+    const isSuperAdmin = computed(() => userRole.value === 'SUPER_ADMIN');
+    
+    // 是否為一般管理員
+    const isAdmin = computed(() => userRole.value === 'ADMIN');
+    
+    // 是否為營地擁有者
+    const isCampOwner = computed(() => userRole.value === 'CAMP_OWNER' || userRole.value === 'owner');
+    
+    // 是否為普通用戶
+    const isRegularUser = computed(() => {
+      return userRole.value === 'USER' || userRole.value === 'user' || 
+             userRole.value === 'camper' || !userRole.value;
+    });
+    
+    // 用戶ID和用戶名
     const userId = computed(() => authStore.user?.id || null);
     const username = computed(() => authStore.username || '');
     
@@ -263,7 +283,7 @@ export default {
         return;
       }
       
-      if (isAdmin.value) {
+      if (isAdmin.value || isSuperAdmin.value) {
         alert('管理員不能發表評價');
         return;
       }
@@ -323,7 +343,7 @@ export default {
         return;
       }
       
-      if (!isAdmin.value && report.action === 'process') {
+      if (!isAdmin.value && !isSuperAdmin.value && report.action === 'process') {
         alert('只有管理員才能處理檢舉');
         return;
       }
@@ -371,7 +391,7 @@ export default {
       try {
         if (!selectedReport.value) return;
         
-        if (!isAdmin.value) {
+        if (!isAdmin.value && !isSuperAdmin.value) {
           alert('只有管理員才能批准檢舉');
           return;
         }
@@ -409,7 +429,7 @@ export default {
       try {
         if (!selectedReport.value) return;
         
-        if (!isAdmin.value) {
+        if (!isAdmin.value && !isSuperAdmin.value) {
           alert('只有管理員才能駁回檢舉');
           return;
         }
@@ -465,7 +485,7 @@ export default {
       console.log('評價系統初始化');
       console.log('- campSiteId:', campSiteId.value);
       console.log('- 用戶狀態:', isLoggedIn.value ? '已登入' : '未登入');
-      console.log('- 用戶角色:', authStore.role);
+      console.log('- 用戶角色:', userRole.value);
     });
     
     return {
@@ -479,8 +499,11 @@ export default {
       
       // 從 authStore 獲取的用戶信息
       isLoggedIn,
+      userRole,
       isAdmin,
+      isSuperAdmin,
       isCampOwner,
+      isRegularUser,
       userId,
       username,
       currentUserObject,
@@ -583,4 +606,3 @@ export default {
   }
 }
 </style>
-```

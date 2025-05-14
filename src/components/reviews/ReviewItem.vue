@@ -1,16 +1,15 @@
-<!-- ReviewItem.vue - 單個評價卡片組件 (修改版) -->
+<!-- src/components/reviews/ReviewItem.vue -->
 <template>
   <!-- 整個評價卡片容器，無需改變類名 -->
   <div class="review-item" :class="{ 'reported-review': isReviewReported }">
     <!-- 被檢舉評價顯示：修改此處的條件判斷，使得評價被檢舉後仍然顯示在列表中 -->
-    <div v-if="isReviewReported && !isAdmin" class="reported-notice" style="padding: 40px;">
+    <div v-if="isReviewReported && !hasAdminPermissions" class="reported-notice" style="padding: 40px;">
       <i class="bi bi-shield-exclamation me-2"></i>
       此評價正在審核中，暫時隱藏
-      
     </div>
     
     <!-- 只有管理員可看到被檢舉的評價內容 -->
-    <div v-else-if="isReviewReported && isAdmin" class="reported-admin-view">
+    <div v-else-if="isReviewReported && hasAdminPermissions" class="reported-admin-view">
       <div class="review-header">
         <div class="admin-review-alert">
           <i class="bi bi-shield-exclamation me-1"></i>
@@ -239,13 +238,13 @@
       <!-- 回覆區域 -->
       <div v-if="review.replyText" class="reply-section" :class="{ 'reported-reply': isReplyReported }">
         <!-- 非管理員看到被檢舉的回覆 - 保持原版 -->
-        <div v-if="isReplyReported && !isAdmin" class="reported-notice">
+        <div v-if="isReplyReported && !hasAdminPermissions" class="reported-notice">
           <i class="bi bi-shield-exclamation me-2"></i>
           此回覆正在審核中，暫時隱藏
         </div>
         
         <!-- 管理員看到被檢舉的回覆：調整後的精簡版 -->
-        <div v-else-if="isReplyReported && isAdmin" class="reported-admin-view">
+        <div v-else-if="isReplyReported && hasAdminPermissions" class="reported-admin-view">
           <div class="admin-review-alert">
             <i class="bi bi-shield-exclamation me-1"></i>
             <small><strong>此回覆已被檢舉</strong> - 僅管理員可見</small>
@@ -328,7 +327,7 @@
           
           <!-- 回覆按鈕 (只對營地主人顯示) -->
           <button 
-            v-if="isOwner && !review.replyText" 
+            v-if="isCampOwnerType && !review.replyText" 
             class="btn btn-sm btn-outline-primary ms-2" 
             @click="$emit('reply-review', review)"
           >
@@ -428,7 +427,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { Modal } from 'bootstrap';
 
 export default {
@@ -457,37 +456,72 @@ export default {
     // 為每個評論創建唯一的模態視窗ID
     const modalId = `imageViewer-${props.review.id}`;
     
-    // 判斷當前用戶角色
-    const isAdmin = props.currentUser.role === 'admin';
-    const isOwner = props.currentUser.role === 'owner';
-    const isUser = props.currentUser.role === 'user';
+    // ----- 角色判斷邏輯 -----
+    
+    // 獲取用戶角色，並統一轉為小寫便於比較
+    const userRole = computed(() => {
+      return (props.currentUser.role || '').toLowerCase();
+    });
+    
+    // 判斷是否為管理員或超級管理員
+    const hasAdminPermissions = computed(() => {
+      return ['admin', 'super_admin'].includes(userRole.value);
+    });
+    
+    // 判斷是否為普通用戶
+    const isRegularUser = computed(() => {
+      return ['user', 'camper', ''].includes(userRole.value);
+    });
+    
+    // 判斷是否為營地擁有者
+    const isCampOwnerType = computed(() => {
+      return ['camp_owner', 'owner'].includes(userRole.value);
+    });
     
     // 判斷是否為評價的擁有者
-    const isReviewOwner = props.currentUser.id === props.review.userId;
+    const isReviewOwner = computed(() => {
+      return props.currentUser.id === props.review.userId;
+    });
     
     // 判斷是否為回覆的擁有者 (只有營地主人會是回覆的擁有者)
-    const isReplyOwner = isOwner;
+    const isReplyOwner = computed(() => {
+      return isCampOwnerType.value;
+    });
     
     // 判斷評價是否已被檢舉
-    const isReviewReported = props.review.reviewHasActiveReport;
+    const isReviewReported = computed(() => {
+      return props.review.reviewHasActiveReport;
+    });
     
     // 判斷回覆是否已被檢舉
-    const isReplyReported = props.review.replyHasActiveReport;
+    const isReplyReported = computed(() => {
+      return props.review.replyHasActiveReport;
+    });
     
     // 判斷評價是否被編輯過
-    const isEdited = props.review.updatedAt && new Date(props.review.updatedAt).getTime() > new Date(props.review.createdAt).getTime() + 60000;
+    const isEdited = computed(() => {
+      return props.review.updatedAt && 
+             new Date(props.review.updatedAt).getTime() > new Date(props.review.createdAt).getTime() + 60000;
+    });
     
     // 判斷是否有圖片
-    const hasImages = props.review.imageUrls && props.review.imageUrls.length > 0;
+    const hasImages = computed(() => {
+      return props.review.imageUrls && props.review.imageUrls.length > 0;
+    });
     
-    // 新增：判斷是否可以檢舉評價
-    // 一般用戶和營地主人都可以檢舉評價，但不能檢舉自己的評價
-    const canReportReview = (isUser || isOwner) && !isReviewOwner && !isAdmin;
+    // 是否可以檢舉評價：一般用戶和營地主人都可以檢舉評價，但不能檢舉自己的評價或管理員
+    const canReportReview = computed(() => {
+      return (isRegularUser.value || isCampOwnerType.value) && 
+             !isReviewOwner.value && 
+             !hasAdminPermissions.value;
+    });
     
-    // 新增：判斷是否可以檢舉回覆
-    // 一般用戶和營地主人都可以檢舉回覆，但不能檢舉自己的回覆
-    // 營地主人的用戶ID是否與回覆者ID相同需要額外判斷
-    const canReportReply = (isUser || isOwner) && !isAdmin && !isReplyOwner;
+    // 是否可以檢舉回覆：一般用戶和營地主人都可以檢舉回覆，但不能檢舉自己的回覆或管理員
+    const canReportReply = computed(() => {
+      return (isRegularUser.value || isCampOwnerType.value) && 
+             !hasAdminPermissions.value && 
+             !isReplyOwner.value;
+    });
     
     // 圖片查看相關變數
     const imageViewerModal = ref(null);
@@ -592,32 +626,20 @@ export default {
       return url.startsWith('/') ? url : `/${url}`;
     };
     
-    // 渲染評價內容 (管理員查看被檢舉的評價)
-    const renderReviewContent = () => {
-      return (
-        `【用戶】${props.review.userName || '匿名用戶'}\n` +
-        `【評分】${props.review.overallRating} 星\n` +
-        `【內容】${props.review.reviewText}\n` +
-        (props.review.pros ? `【優點】${props.review.pros}\n` : '') +
-        (props.review.cons ? `【缺點】${props.review.cons}` : '')
-      );
-    };
-    
     return {
-      isAdmin,
-      isOwner,
-      isUser,
+      hasAdminPermissions,
+      isRegularUser,
+      isCampOwnerType,
       isReviewOwner,
       isReplyOwner,
       isReviewReported,
       isReplyReported,
       isEdited,
       hasImages,
-      canReportReview, // 新增：是否可以檢舉評價
-      canReportReply, // 新增：是否可以檢舉回覆
+      canReportReview,
+      canReportReply,
       formatDate,
       processImageUrl,
-      renderReviewContent,
       
       // 圖片查看相關
       modalId,
