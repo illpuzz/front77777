@@ -56,7 +56,7 @@
   <script>
   import { ref, onMounted, watch } from 'vue';
   import { Modal } from 'bootstrap';
-  import axios from 'axios';
+  import axiosapi from '@/plugins/axios.js';
   
   export default {
     name: 'ReplyEditModal',
@@ -121,7 +121,7 @@
           console.log(`提交編輯回覆 ${props.review.id}...`);
           
           // 呼叫API提交編輯回覆
-          const response = await axios.put(`/api/reviews/${props.review.id}/reply`, {
+          const response = await axiosapi.put(`/api/reviews/${props.review.id}/reply`, {
             replyText: editReplyText.value.trim()
           });
           

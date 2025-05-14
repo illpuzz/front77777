@@ -197,8 +197,7 @@
 
 <script>
 import { ref, reactive, computed, watch, onMounted } from 'vue';
-import axios from 'axios';
-import axiosapi from '@/plugins/axios.js'; // 使用配置好的axios實例
+import axiosapi from '@/plugins/axios.js'; // 修改：使用配置好的axios實例
 
 export default {
   name: 'AddReviewForm',
@@ -351,6 +350,7 @@ export default {
           cons: reviewData.cons
         };
         
+        // 修改：使用axiosapi替代axios，確保使用配置好的帶有認證的實例
         // 提交評價數據
         const response = await axiosapi.post('/api/reviews', submitData);
         console.log('評價提交成功:', response.data);
@@ -369,7 +369,7 @@ export default {
               formData.append('file', image.file);
               formData.append('reviewId', newReviewId);
               
-              // 上傳圖片
+              // 修改：使用axiosapi替代axios來上傳圖片
               const uploadResponse = await axiosapi.post('/api/review-images/upload', formData, {
                 headers: {
                   'Content-Type': 'multipart/form-data'

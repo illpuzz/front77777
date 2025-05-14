@@ -56,7 +56,7 @@
   <script>
   import { ref, computed, onMounted } from 'vue';
   import { Modal } from 'bootstrap';
-  import axios from 'axios';
+  import axiosapi from '@/plugins/axios.js'; // 修改：使用配置好的axios實例
   
   export default {
     name: 'ReportModal',
@@ -139,9 +139,9 @@
           
           console.log(`提交${props.targetType === 'review' ? '評價' : '回覆'}檢舉數據:`, reportData);
           
-          // 呼叫 API 提交檢舉
+          // 修改：使用axiosapi替代axios，確保使用配置好的帶有認證的實例
           const endpoint = `/api/review-reports/${props.targetType}`;
-          const response = await axios.post(endpoint, reportData);
+          const response = await axiosapi.post(endpoint, reportData);
           
           console.log('檢舉 API 回應:', response.data);
           

@@ -56,7 +56,7 @@
   <script>
   import { ref, onMounted } from 'vue';
   import { Modal } from 'bootstrap';
-  import axios from 'axios';
+  import axiosapi from '@/plugins/axios.js'; // 修改：使用配置好的axios實例
   
   export default {
     name: 'ReviewReplyModal',
@@ -112,8 +112,8 @@
         try {
           console.log(`提交回覆評價 ${props.review.id}...`);
           
-          // 呼叫API提交回覆
-          const response = await axios.put(`/api/reviews/${props.review.id}/reply`, {
+          // 修改：使用axiosapi替代axios，確保使用配置好的帶有認證的實例
+          const response = await axiosapi.put(`/api/reviews/${props.review.id}/reply`, {
             replyText: replyText.value.trim()
           });
           
