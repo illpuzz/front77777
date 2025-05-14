@@ -648,66 +648,7 @@ export default {
 </script>
 
 <style scoped>
-.reviews-list-container {
-  background-color: white;
-  border-radius: 12px;
-  padding: 25px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  margin-bottom: 30px;
-  scroll-margin-top: 20px; /* 確保滾動到頂部時有一些邊距 */
-}
-
-.loading-state {
-  padding: 40px 0;
-}
-
-.spinner-border {
-  width: 3rem;
-  height: 3rem;
-  color: var(--forest-medium);
-}
-
-.empty-state {
-  padding: 40px 0;
-}
-
-.empty-icon {
-  font-size: 3rem;
-  color: var(--forest-light);
-  opacity: 0.7;
-  margin-bottom: 15px;
-  display: block;
-}
-
-.section-title {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--forest-dark);
-  position: relative;
-  padding-bottom: 10px;
-}
-
-.section-title::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 50px;
-  height: 3px;
-  background-color: var(--forest-medium);
-  border-radius: 2px;
-}
-
-.review-count {
-  font-size: 1rem;
-  font-weight: 400;
-  color: var(--forest-medium);
-  margin-left: 5px;
-}
-
-.review-items {
-  margin-top: 20px;
-}
+/* 簡潔分頁樣式 - 適用於 ReviewsList.vue */
 
 .pagination-container {
   display: flex;
@@ -715,23 +656,82 @@ export default {
   margin-top: 25px;
 }
 
+/* 基本分頁樣式 */
 .pagination {
-  --bs-pagination-active-bg: var(--forest-medium);
-  --bs-pagination-active-border-color: var(--forest-medium);
+  display: flex;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
-/* 響應式調整 */
-@media (max-width: 768px) {
-  .reviews-list-container {
-    padding: 15px;
-  }
-  
-  .section-title {
-    font-size: 1.3rem;
-  }
-  
+/* 通用頁碼項目樣式 */
+.pagination .page-item {
+  margin: 0;
+}
+
+/* 頁碼連結樣式 */
+.pagination .page-link {
+  padding: 8px 14px;
+  color: #356648; /* 使用森林綠色 */
+  background-color: #ffffff;
+  border: 1px solid #dee2e6;
+  transition: all 0.2s ease;
+  min-width: 40px;
+  text-align: center;
+}
+
+/* 活動頁碼樣式 - 確保有足夠對比度 */
+.pagination .page-item.active .page-link {
+  background-color: #356648; /* 森林綠色背景 */
+  border-color: #356648;
+  color: #ffffff; /* 白色文字 */
+  font-weight: 500;
+  position: relative;
+  z-index: 1; /* 確保疊加時顯示正確 */
+}
+
+/* 禁用狀態 */
+.pagination .page-item.disabled .page-link {
+  color: #6c757d;
+  background-color: #f8f9fa;
+  border-color: #dee2e6;
+  cursor: not-allowed;
+}
+
+/* 鼠標懸停效果 */
+.pagination .page-item:not(.active):not(.disabled) .page-link:hover {
+  background-color: #e6f4ea; /* 淺綠色背景 */
+  border-color: #8ebba7; /* 淺綠色邊框 */
+  color: #356648;
+  z-index: 2;
+}
+
+/* 第一個和最後一個項目的圓角 */
+.pagination .page-item:first-child .page-link {
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+}
+
+.pagination .page-item:last-child .page-link {
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
+
+/* 添加箭頭樣式 */
+.pagination .page-link .bi {
+  font-size: 1rem;
+  line-height: 1;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* 針對小型屏幕的響應式調整 */
+@media (max-width: 576px) {
   .pagination .page-link {
-    padding: 0.375rem 0.5rem;
+    padding: 6px 10px;
+    min-width: 32px;
   }
 }
 </style>
