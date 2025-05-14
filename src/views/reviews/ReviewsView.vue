@@ -1,8 +1,9 @@
-<!-- src/views/reviews/ReviewsView.vue - 修復了評價視圖組件，支持根據URL參數獲取營地評論 -->
+<!-- src/views/reviews/ReviewsView.vue -->
+```vue
 <template>
     <div class="reviews-view">
       <!-- 管理員檢舉管理面板（僅管理員可見） -->
-      <div v-if="currentUser && currentUser.role === 'admin'" class="admin-controls mb-4">
+      <div v-if="isAdmin" class="admin-controls mb-4">
         <div class="d-flex justify-content-between align-items-center">
           <h2 class="admin-title"><i class="bi bi-shield-check me-2"></i>管理員專區</h2>
           <div class="control-buttons">
@@ -28,25 +29,27 @@
       
       <!-- 管理員檢舉管理面板 -->
       <AdminReportManager 
-        v-if="currentUser && currentUser.role === 'admin' && adminView === 'reports'"
-        :currentUser="currentUser"
+        v-if="isAdmin && adminView === 'reports'"
+        :currentUser="currentUserObject"
+        @handle-report="handleReport"
       />
       
       <!-- 評價相關功能（所有用戶可見） -->
-      <div v-if="adminView === 'reviews' || !currentUser || currentUser.role !== 'admin'">
+      <div v-if="adminView === 'reviews' || !isAdmin">
         <ReviewFilter 
           @filter-applied="applyFilters"
           @add-review="handleAddReviewClick"
-          :canAddReview="currentUser && currentUser.role === 'user'"
+          :canAddReview="isLoggedIn && !isAdmin && !isCampOwner"
         />
         
         <!-- 使用路由參數的campSiteId -->
         <ReviewsList 
           :campSiteId="campSiteId"
           :filters="filters"
-          :currentUser="currentUser || emptyUser"
+          :currentUser="currentUserObject"
           @handle-report="handleReport"
           @total-updated="updateTotalReviews"
+          @toggle-like="handleToggleLike"
           ref="reviewsListRef"
         />
       </div>
@@ -63,7 +66,7 @@
               <!-- 使用路由參數的campSiteId -->
               <AddReviewForm 
                 :campSiteId="campSiteId"
-                :userId="currentUser ? currentUser.id : null"
+                :userId="userId"
                 @review-added="handleReviewAdded"
               />
             </div>
@@ -108,9 +111,10 @@
 </template>
   
 <script>
-import { ref, reactive, onMounted, watch } from 'vue';
+import { ref, reactive, onMounted, watch, computed } from 'vue';
 import { Modal } from 'bootstrap';
 import { useRoute } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
 import axiosapi from '@/plugins/axios.js'; // 使用配置好的axios實例
 
 // 確保加載了Bootstrap樣式和腳本
@@ -132,6 +136,9 @@ export default {
     AddReviewForm
   },
   setup() {
+    // 使用 Pinia auth store
+    const authStore = useAuthStore();
+    
     // 使用vue-router的useRoute獲取路由參數
     const route = useRoute();
     
@@ -159,15 +166,30 @@ export default {
     // ReviewsList 組件引用
     const reviewsListRef = ref(null);
     
-    // 當前用戶信息 - 從localStorage獲取
-    const currentUser = ref(null);
+    // 從 authStore 獲取用戶信息的計算屬性
+    const isLoggedIn = computed(() => authStore.isLoggedIn);
+    const isAdmin = computed(() => authStore.isAdmin);
+    const isCampOwner = computed(() => authStore.isCampOwner);
+    const userId = computed(() => authStore.user?.id || null);
+    const username = computed(() => authStore.username || '');
     
-    // 空用戶對象，用於未登錄狀態
-    const emptyUser = {
-      id: null,
-      username: 'guest',
-      role: 'guest'
-    };
+    // 構建完整的當前用戶對象 - 提供給子組件使用
+    const currentUserObject = computed(() => {
+      if (!isLoggedIn.value) {
+        return {
+          id: null,
+          username: 'guest',
+          role: 'guest'
+        };
+      }
+      
+      return {
+        id: authStore.user?.id,
+        username: authStore.username,
+        role: authStore.role,
+        fullName: authStore.fullName
+      };
+    });
     
     // 檢舉相關
     const selectedReport = ref(null);
@@ -185,33 +207,6 @@ export default {
     
     const getReportTypeName = (type) => {
       return reportTypes[type] || '未知';
-    };
-    
-    // 從localStorage獲取用戶資訊
-    const getUserFromLocalStorage = () => {
-      try {
-        const userJson = localStorage.getItem('user');
-        const token = localStorage.getItem('accessToken');
-        
-        if (userJson && token) {
-          const userData = JSON.parse(userJson);
-          
-          // 確保有基本屬性
-          currentUser.value = {
-            id: userData.id || null,
-            username: userData.username || userData.name || 'user',
-            role: localStorage.getItem('userRole') || userData.role || 'user'
-          };
-          
-          console.log('從localStorage獲取用戶信息:', currentUser.value);
-        } else {
-          console.log('localStorage中沒有用戶信息或token');
-          currentUser.value = null;
-        }
-      } catch (err) {
-        console.error('解析localStorage中的用戶數據時出錯:', err);
-        currentUser.value = null;
-      }
     };
     
     // 應用篩選條件
@@ -263,10 +258,21 @@ export default {
     
     // 處理新增評價按鈕點擊
     const handleAddReviewClick = () => {
-      if (!currentUser.value) {
+      if (!isLoggedIn.value) {
         alert('請先登入後才能發表評價');
         return;
       }
+      
+      if (isAdmin.value) {
+        alert('管理員不能發表評價');
+        return;
+      }
+      
+      if (isCampOwner.value) {
+        alert('營地擁有者不能對營地發表評價');
+        return;
+      }
+      
       openAddReviewModal();
     };
     
@@ -293,8 +299,35 @@ export default {
       }
     };
     
+    // 處理點讚/取消點讚
+    const handleToggleLike = async (reviewId) => {
+      if (!isLoggedIn.value) {
+        alert('請先登入後才能點讚評價');
+        return;
+      }
+      
+      try {
+        console.log(`切換評價 ${reviewId} 的讚狀態`);
+        
+        // 這裡會連接到ReviewsList組件內部的處理邏輯，通常不需要在這裡額外處理
+      } catch (error) {
+        console.error('點讚操作失敗:', error);
+        alert('操作失敗，請稍後再試');
+      }
+    };
+    
     // 處理檢舉 - 使用與新增評價相同的直接操作方式
     const handleReport = (report) => {
+      if (!isLoggedIn.value) {
+        alert('請先登入後才能處理檢舉');
+        return;
+      }
+      
+      if (!isAdmin.value && report.action === 'process') {
+        alert('只有管理員才能處理檢舉');
+        return;
+      }
+      
       selectedReport.value = report;
       reportHandlerNote.value = '';
       
@@ -338,6 +371,11 @@ export default {
       try {
         if (!selectedReport.value) return;
         
+        if (!isAdmin.value) {
+          alert('只有管理員才能批准檢舉');
+          return;
+        }
+        
         await axiosapi.put(`/api/review-reports/${selectedReport.value.id}/approve-and-remove`, {
           handlerNote: reportHandlerNote.value
         });
@@ -370,6 +408,11 @@ export default {
     const rejectReport = async () => {
       try {
         if (!selectedReport.value) return;
+        
+        if (!isAdmin.value) {
+          alert('只有管理員才能駁回檢舉');
+          return;
+        }
         
         await axiosapi.put(`/api/review-reports/${selectedReport.value.id}/process`, {
           status: 'rejected',
@@ -414,27 +457,41 @@ export default {
       }
     });
     
-    // 初始化 - 取得用戶資訊
+    // 在組件掛載時進行初始化
     onMounted(() => {
-      getUserFromLocalStorage();
-      console.log('當前campSiteId:', campSiteId.value);
+      // 檢查並嘗試恢復用戶認證狀態
+      authStore.checkAndRestoreAuth();
+      
+      console.log('評價系統初始化');
+      console.log('- campSiteId:', campSiteId.value);
+      console.log('- 用戶狀態:', isLoggedIn.value ? '已登入' : '未登入');
+      console.log('- 用戶角色:', authStore.role);
     });
     
     return {
       adminView,
       filters,
-      currentUser,
-      emptyUser,
       totalReviews,
       selectedReport,
       reportHandlerNote,
       reviewsListRef,
-      campSiteId, // 增加返回campSiteId
+      campSiteId,
+      
+      // 從 authStore 獲取的用戶信息
+      isLoggedIn,
+      isAdmin,
+      isCampOwner,
+      userId,
+      username,
+      currentUserObject,
+      
+      // 方法
       getReportTypeName,
       applyFilters,
       updateTotalReviews,
       handleAddReviewClick,
       handleReviewAdded,
+      handleToggleLike,
       handleReport,
       approveReport,
       rejectReport
@@ -526,3 +583,4 @@ export default {
   }
 }
 </style>
+```
