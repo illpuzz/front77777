@@ -7,14 +7,22 @@
         評價搜尋與篩選
       </h2>
       
-      <button 
-        v-if="canAddReview" 
-        class="btn btn-primary add-review-btn"
-        @click="$emit('add-review')"
-      >
-        <i class="bi bi-plus-circle me-2"></i>
-        新增評價
-      </button>
+      <!-- 新增評價按鈕 - 增加調試資訊 -->
+      <div>
+        <!-- 調試資訊，正式使用時可以移除 -->
+        <div class="debug-info" style="font-size: 0.7rem; color: #999; margin-bottom: 5px;">
+          canAddReview: {{ canAddReview }}
+        </div>
+        
+        <button 
+          v-if="canAddReview" 
+          class="btn btn-primary add-review-btn"
+          @click="$emit('add-review')"
+        >
+          <i class="bi bi-plus-circle me-2"></i>
+          新增評價
+        </button>
+      </div>
     </div>
     
     <div class="filter-content">
@@ -95,7 +103,7 @@
 </template>
 
 <script>
-import { reactive, toRefs } from 'vue';
+import { reactive, toRefs, onMounted } from 'vue';
 
 export default {
   name: 'ReviewFilter',
@@ -135,6 +143,11 @@ export default {
       applyFilters();
     };
     
+    // 在組件掛載時輸出調試資訊
+    onMounted(() => {
+      console.log('ReviewFilter 組件掛載，canAddReview:', props.canAddReview);
+    });
+    
     return {
       ...toRefs(state),
       applyFilters,
@@ -161,13 +174,15 @@ export default {
 }
 
 .add-review-btn {
-  background-color: var(--forest-dark);
-  border-color: var(--forest-dark);
+  background-color: var(--forest-dark, #356648);
+  border-color: var(--forest-dark, #356648);
+  z-index: 1; /* 確保按鈕不會被其他元素遮擋 */
+  position: relative; /* 確保 z-index 生效 */
 }
 
 .add-review-btn:hover {
-  background-color: var(--forest-medium);
-  border-color: var(--forest-medium);
+  background-color: var(--forest-medium, #4d8d6a);
+  border-color: var(--forest-medium, #4d8d6a);
 }
 
 .card {
@@ -177,13 +192,37 @@ export default {
 }
 
 .input-group-text {
-  background-color: var(--forest-ultralight);
-  color: var(--forest-dark);
+  background-color: var(--forest-ultralight, #e6f4ea);
+  color: var(--forest-dark, #356648);
   border-color: #ced4da;
 }
 
 .form-control:focus, .form-select:focus {
-  border-color: var(--forest-medium);
+  border-color: var(--forest-medium, #4d8d6a);
   box-shadow: 0 0 0 0.25rem rgba(53, 102, 72, 0.25);
+}
+
+/* 確保調試資訊不影響布局 */
+.debug-info {
+  position: absolute;
+  top: -15px;
+  right: 0;
+}
+
+/* 回應式調整 */
+@media (max-width: 768px) {
+  .filter-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .filter-header h2 {
+    margin-bottom: 15px;
+  }
+  
+  .debug-info {
+    position: static;
+    margin-bottom: 5px;
+  }
 }
 </style>

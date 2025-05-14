@@ -486,6 +486,9 @@ export default {
       console.log('- campSiteId:', campSiteId.value);
       console.log('- 用戶狀態:', isLoggedIn.value ? '已登入' : '未登入');
       console.log('- 用戶角色:', userRole.value);
+      
+      // 添加調試代碼，確認canAddReview的計算邏輯
+      console.log('- canAddReview:', isLoggedIn.value && isRegularUser.value && !isCampOwner.value);
     });
     
     return {
