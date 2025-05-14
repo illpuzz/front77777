@@ -1,4 +1,4 @@
-<!-- src/components/reviews/ReviewsView.vue - 修復了評價視圖組件 -->
+<!-- src/views/reviews/ReviewsView.vue - 修復了評價視圖組件，支持根據URL參數獲取營地評論 -->
 <template>
     <div class="reviews-view">
       <!-- 管理員檢舉管理面板（僅管理員可見） -->
@@ -40,9 +40,9 @@
           :canAddReview="currentUser && currentUser.role === 'user'"
         />
         
-        <!-- 導入修復後的評價列表組件 -->
+        <!-- 使用路由參數的campSiteId -->
         <ReviewsList 
-          :campSiteId="1"
+          :campSiteId="campSiteId"
           :filters="filters"
           :currentUser="currentUser || emptyUser"
           @handle-report="handleReport"
@@ -60,8 +60,9 @@
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
+              <!-- 使用路由參數的campSiteId -->
               <AddReviewForm 
-                :campSiteId="1"
+                :campSiteId="campSiteId"
                 :userId="currentUser ? currentUser.id : null"
                 @review-added="handleReviewAdded"
               />
@@ -107,9 +108,9 @@
 </template>
   
 <script>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, watch } from 'vue';
 import { Modal } from 'bootstrap';
-import axios from 'axios';
+import { useRoute } from 'vue-router';
 import axiosapi from '@/plugins/axios.js'; // 使用配置好的axios實例
 
 // 確保加載了Bootstrap樣式和腳本
@@ -130,13 +131,13 @@ export default {
     ReviewsList,
     AddReviewForm
   },
-  props: {
-    campSiteId: {
-      type: [Number, String],
-      default: 1
-    }
-  },
-  setup(props) {
+  setup() {
+    // 使用vue-router的useRoute獲取路由參數
+    const route = useRoute();
+    
+    // 獲取路由參數中的campSiteId，並轉為數字
+    const campSiteId = ref(parseInt(route.params.campSiteId) || 1);
+    
     // 管理員視圖狀態
     const adminView = ref('reviews'); // 'reviews' 或 'reports'
     
@@ -399,9 +400,24 @@ export default {
       }
     };
     
+    // 監聽路由參數變化
+    watch(() => route.params.campSiteId, (newCampSiteId) => {
+      // 更新campSiteId
+      campSiteId.value = parseInt(newCampSiteId) || 1;
+      console.log('路由參數變化，新的campSiteId:', campSiteId.value);
+      
+      // 刷新評價列表
+      if (reviewsListRef.value && typeof reviewsListRef.value.fetchReviews === 'function') {
+        setTimeout(() => {
+          reviewsListRef.value.fetchReviews();
+        }, 100);
+      }
+    });
+    
     // 初始化 - 取得用戶資訊
     onMounted(() => {
       getUserFromLocalStorage();
+      console.log('當前campSiteId:', campSiteId.value);
     });
     
     return {
@@ -413,6 +429,7 @@ export default {
       selectedReport,
       reportHandlerNote,
       reviewsListRef,
+      campSiteId, // 增加返回campSiteId
       getReportTypeName,
       applyFilters,
       updateTotalReviews,

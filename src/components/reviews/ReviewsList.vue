@@ -1,4 +1,4 @@
-<!-- components/reviews/ReviewsList.vue - 修復認證問題 -->
+<!-- components/reviews/ReviewsList.vue - 修正使用 campSiteId 參數 -->
 <template>
     <div class="reviews-list-container" ref="reviewsContainer">
       <!-- 載入狀態 -->
@@ -321,6 +321,12 @@ export default {
       scrollToTop();
     }, { deep: true });
     
+    // 監聽 campSiteId 變化
+    watch(() => props.campSiteId, (newCampSiteId, oldCampSiteId) => {
+      console.log(`營地ID從 ${oldCampSiteId} 變更為 ${newCampSiteId}，重新載入評價數據`);
+      fetchReviews();
+    });
+    
     // 滾動到頂部的方法
     const scrollToTop = () => {
       // 方法一：使用 ref 引用的元素滾動到頂部
@@ -341,18 +347,24 @@ export default {
       error.value = '';
       
       try {
-        // 先嘗試獲取 Token
-        const token = localStorage.getItem('accessToken');
+        // 確保 campSiteId 是有效值
+        const campId = parseInt(props.campSiteId);
+        if (isNaN(campId) || campId <= 0) {
+          throw new Error('無效的營地ID');
+        }
         
+        console.log(`開始獲取營地 ${campId} 的評價列表`);
+        
+        // 構建請求參數
         const params = {
-          campSiteId: props.campSiteId,
+          campSiteId: campId,
           userId: props.currentUser.id,
           includeReported: true,  // 確保包含被檢舉的評論
           includeImages: true,    // 添加此參數，確保獲取圖片ID信息
           size: 100  // 設置一個較大的值，確保獲取所有評價
         };
         
-        console.log('開始獲取評價列表，參數:', params);
+        console.log('API請求參數:', params);
         
         // 使用配置好的axios實例，它會自動處理token
         const response = await axiosapi.get('/api/reviews', { params });
@@ -373,6 +385,9 @@ export default {
         }
         
         console.log(`成功載入 ${reviews.value.length} 個評價，總數: ${rawTotalElements.value}`);
+        
+        // 重置為第一頁
+        currentPage.value = 0;
         
         // 通知父組件更新總數
         emit('total-updated', totalReviews.value);
@@ -733,5 +748,42 @@ export default {
     padding: 6px 10px;
     min-width: 32px;
   }
+}
+
+/* 基本樣式 */
+.reviews-list-container {
+  padding: 15px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+}
+
+.section-title {
+  color: #356648;
+  font-weight: 600;
+}
+
+.review-count {
+  font-size: 0.9rem;
+  color: #6c757d;
+  font-weight: normal;
+}
+
+.loading-state, .error-state, .empty-state {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.empty-state .bi-chat-square-text {
+  font-size: 3rem;
+  color: #dee2e6;
+  margin-bottom: 15px;
+}
+
+.text-forest {
+  color: #356648;
+}
+
+.text-forest-medium {
+  color: #4d8d6a;
 }
 </style>
